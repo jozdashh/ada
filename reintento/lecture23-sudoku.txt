@@ -1,0 +1,248 @@
+Sudoku
+------
+
+El Sudoku es un juego lógico que consiste en llenar un tablero de 9 x
+9 con los dígitos 1 .. 9 de tal manera que cada fila, columna y
+subcuadrícula de 3 x 3 contenga exactamente todos estos dígitos.
+
+    012 345 678
+    ___________
+0  |...|...|...|
+1  |...|...|...|
+2  |...|...|...|
+   |-----------|
+3  |...|...|...|
+4  |...|...|...|
+5  |...|...|...|
+   |-----------|
+6  |...|...|...|
+7  |...|...|...|
+8  |...|...|...|
+    -----------
+
+El problema se puede especificar de la siguiente manera:
+
+  Entrada: un tablero de Sudoku S parcialmente lleno
+
+  Salida: un tablero de Sudoku S' que sea una extensión de S en el
+          cual todas las celdas han sido asignadas un dígito del
+          1 .. 9 si esto es posible, o el tablero S de lo contrario
+
+Note que no hay ninguna condición especial sobre el tablero S en el
+sentido en que pueda que dicho tablero no tenga solución alguna.
+
+El objetivo es resolver el problema planteado anteriormente usando la
+técnica de reintento. Como convención, se considera que S[i][j] = '.'
+sii el tablero S en la posición (i,j) no ha sido asignado un dígito
+para 0 <= i,j < 9.
+
+Resolver este problema usando reintento es relativamente fácil: se
+recorre el tablero, por ejemplo, de la fila superior y la columna
+izquierda hasta la fila inferior y columna derecha. En cada celda, se
+toma la decisión de probar todas las posibilidades que no generen
+conflicto cuando no hay un dígito asociado a ella y se recurre en la
+siguiente celda. Cuando no es posible encontrar un dígito que permita
+avanzar, entonces falla la búsqueda en ese caso y se continúa con el
+proceso de reintento. Al final, si se llega a la posición (8,8) con un
+dígito asignado allí, entonces se ha encontrado una solución y
+consecuentemente se ha resuelto el problema inicialmente planteado.
+Esta estrategia de solución funciona aún cuando el recorrido se haga
+de otra manera: lo importante, es probar todas las posibilidades a
+partir del tablero inicial S.
+
+¿Qué tipo de cálculos o información adicional se puede usar al momento
+de recurrir para evitar que la búsqueda sea muy ineficiente?
+
+En el siguiente fragmento de código se implementan ciertas heurísitcas
+para buscar una solución:
+
+  - se pasa como parámetro de la búsqueda la cantidad de celdas que aún
+    no han sido asignadas en S; cuando esta cantidad es 0, entonces se ha
+    logrado encontrar una solución
+
+  - se pasa como parámetro de la búsqueda la siguiente posición a
+    partir de la cual se debe seguir haciendo la búsqueda; esto
+    permite evitar recorrer lo que ya se ha recorrido
+
+Adicionalmente, el código está instrumentado con la variable glboal
+
+  call_count
+
+que registra la cantidad de veces que se llama la función de solución.
+Esta variable se inicializa en 0 antes de iniciar cada búsqueda. La
+función main() lee de la entrada estandar tableros de Sudoku (ver el
+formato de casos de prueba al final del archivo).
+    
+
+from sys import stdin
+
+call_count = None
+
+def compute_move(S,r,c):
+  ans,i = set( str(x) for x in range(1,10) ),0
+  fr,fc = r-(r%3),c-(c%3)
+  while len(ans)!=0 and i!=9:
+    if S[r][i]!='.': ans.discard(S[r][i])
+    if S[i][c]!='.': ans.discard(S[i][c])
+    if S[fr+(i//3)][fc+(i%3)]!='.': ans.discard(S[fr+(i//3)][fc+(i%3)])
+    i += 1
+  return list(ans)
+
+def solve(S,r,c,p):
+  global call_count
+  call_count += 1
+  ans = None
+  if p==0:
+    ans = True
+  else:
+    nr,nc = r,c+1
+    if nc==9: nr,nc = nr+1,0
+    if S[r][c]=='.':
+      move = compute_move(S,r,c)
+      ans,i = False,0
+      while not(ans) and i!=len(move):
+        S[r][c] = move[i]
+        ans = solve(S,nr,nc,p-1)
+        i += 1
+      if not(ans): S[r][c] = '.'
+    else:
+      ans = solve(S,nr,nc,p)
+  return ans
+
+def main():
+  global call_count
+  line = stdin.readline()
+  while len(line)!=0:
+    S = list()
+    row = [ x for x in line.strip() ] ; S.append(row)
+    for i in range(8):
+      row = [ x for x in stdin.readline().strip() ] ; S.append(row)
+    pending = 0
+    for r in range(9):
+      for c in range(9):
+        if S[r][c]=='.':
+          pending += 1
+    call_count = 0
+    ans = solve(S,0,0,pending)
+    if ans: print('\n'.join([ ''.join(x) for x in S ]))
+    else: print('No solution.')
+    print('* (# recursive calls={0})'.format(call_count))
+    line = stdin.readline()
+
+main()
+
+
+
+Casos de prueba de entrada
+--------------------------
+
+95...1..7
+.8...2..4
+....752.6
+.........
+4....863.
+19.4.7...
+6..7.....
+.4..1....
+......84.
+53..7....
+6..195...
+.98....6.
+8...6...3
+4..8.3..1
+7...2...6
+.6....28.
+...419..5
+....8..79
+95...1..7
+.5...2..4
+....752.6
+.........
+4....863.
+19.4.7...
+6..7.....
+.4..1....
+......84.
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+8........
+..36.....
+.7..9.2..
+.5...7...
+....457..
+...1...3.
+..1....68
+..85...1.
+.9....4..
+952641387
+786932154
+314875296
+568329471
+427158639
+193467528
+635784912
+849213765
+271596843
+
+
+Casos de prueba de salida
+-------------------------
+952641387
+786932154
+314875296
+568329471
+427158639
+193467528
+635784912
+849213765
+271596843
+* (# recursive calls=7116)
+534678912
+672195348
+198342567
+859761423
+426853791
+713924856
+961537284
+287419635
+345286179
+* (# recursive calls=101)
+No solution.
+* (# recursive calls=396)
+376894512
+894512376
+512376894
+738649125
+649125738
+125738649
+963487251
+487251963
+251963487
+* (# recursive calls=392)
+812753649
+943682175
+675491283
+154237896
+369845721
+287169534
+521974368
+438526917
+796318452
+* (# recursive calls=2233773)
+952641387
+786932154
+314875296
+568329471
+427158639
+193467528
+635784912
+849213765
+271596843
+* (# recursive calls=1)
